@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id           String      @id @default(cuid())
+  username     String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  characters   Character[]
+}
+
+model Character {
+  id            String          @id @default(cuid())
+  name          String          @unique
+  gender        String          @default("androgynous")
+  hair          Int             @default(1)
+  hairColor     String          @default("#e8bd77")
+  baseLevel     Int             @default(1)
+  jobLevel      Int             @default(1)
+  baseExp       Int             @default(0)
+  jobExp        Int             @default(0)
+  statusPoints  Int             @default(48)
+  skillPoints   Int             @default(0)
+  str           Int             @default(1)
+  agi           Int             @default(1)
+  vit           Int             @default(1)
+  int           Int             @default(1)
+  dex           Int             @default(1)
+  luk           Int             @default(1)
+  gold          Int             @default(0)
+  mapId         String          @default("sunpetal-village")
+  x             Float           @default(960)
+  y             Float           @default(704)
+  facing        String          @default("south")
+  isSitting     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  accountId     String
+  account       Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  map           Map             @relation(fields: [mapId], references: [id])
+  inventory     Inventory[]
+  equipment     Equipment[]
+  skills        CharacterSkill[]
+  quests        CharacterQuest[]
+  guildMember   GuildMember?
+}
+
+model Inventory {
+  id          String    @id @default(cuid())
+  quantity    Int       @default(1)
+  slot        Int       @default(0)
+  characterId String
+  itemId      String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id])
+
+  @@unique([characterId, itemId])
+}
+
+model Equipment {
+  id          String    @id @default(cuid())
+  slot        String
+  refineLevel Int       @default(0)
+  characterId String
+  itemId      String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id])
+
+  @@unique([characterId, slot])
+}
+
+model Item {
+  id          String        @id
+  name        String
+  category    String
+  description String        @default("")
+  weight      Int           @default(0)
+  price       Int           @default(0)
+  slots       Int           @default(0)
+  metadata    String        @default("{}")
+  inventory   Inventory[]
+  equipment   Equipment[]
+  drops       MonsterDrop[]
+  card        Card?
+}
+
+model Monster {
+  id          String        @id
+  name        String
+  level       Int           @default(1)
+  maxHp       Int           @default(50)
+  element     String        @default("neutral")
+  race        String        @default("formless")
+  size        String        @default("medium")
+  aiType      String        @default("passive")
+  exp         Int           @default(1)
+  jobExp      Int           @default(1)
+  drops       MonsterDrop[]
+}
+
+model MonsterDrop {
+  id        String  @id @default(cuid())
+  monsterId String
+  itemId    String
+  rate      Float
+  monster   Monster @relation(fields: [monsterId], references: [id], onDelete: Cascade)
+  item      Item    @relation(fields: [itemId], references: [id])
+}
+
+model Skill {
+  id          String          @id
+  name        String
+  job         String
+  maxLevel    Int             @default(10)
+  kind        String
+  description String          @default("")
+  prerequisites String        @default("[]")
+  characters  CharacterSkill[]
+}
+
+model CharacterSkill {
+  id          String    @id @default(cuid())
+  level       Int       @default(0)
+  characterId String
+  skillId     String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  skill       Skill     @relation(fields: [skillId], references: [id])
+
+  @@unique([characterId, skillId])
+}
+
+model Quest {
+  id          String          @id
+  name        String
+  kind        String
+  description String          @default("")
+  objectives  String          @default("[]")
+  reward      String          @default("{}")
+  characters  CharacterQuest[]
+}
+
+model CharacterQuest {
+  id          String    @id @default(cuid())
+  status      String    @default("available")
+  progress    String    @default("{}")
+  characterId String
+  questId     String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  quest       Quest     @relation(fields: [questId], references: [id])
+
+  @@unique([characterId, questId])
+}
+
+model Guild {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  level       Int           @default(1)
+  emblem      String        @default("sun")
+  createdAt   DateTime      @default(now())
+  members     GuildMember[]
+}
+
+model GuildMember {
+  id          String    @id @default(cuid())
+  role        String    @default("member")
+  guildId     String
+  characterId String    @unique
+  guild       Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model Party {
+  id        String   @id @default(cuid())
+  name      String
+  mode      String   @default("equal")
+  members   String   @default("[]")
+  createdAt DateTime @default(now())
+}
+
+model Card {
+  id        String @id
+  name      String
+  slotType  String
+  effect    String @default("{}")
+  itemId    String @unique
+  item      Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model Map {
+  id          String      @id
+  name        String
+  width       Int
+  height      Int
+  tileSize    Int
+  blockedJson String      @default("[]")
+  portalsJson String      @default("[]")
+  characters  Character[]
+  npcs        Npc[]
+}
+
+model Npc {
+  id         String   @id
+  mapId      String
+  name       String
+  role       String
+  x          Float
+  y          Float
+  dialogJson String   @default("[]")
+  map        Map      @relation(fields: [mapId], references: [id], onDelete: Cascade)
+}

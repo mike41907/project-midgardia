@@ -1,0 +1,35 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.11.0",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "width": 60,
+  "height": 40,
+  "tilewidth": 32,
+  "tileheight": 32,
+  "infinite": false,
+  "layers": [
+    {
+      "id": 1,
+      "name": "ground",
+      "type": "tilelayer",
+      "width": 60,
+      "height": 40,
+      "data": [],
+      "properties": [{ "name": "generatedBy", "type": "string", "value": "Project Midgardia" }]
+    },
+    {
+      "id": 2,
+      "name": "collision",
+      "type": "objectgroup",
+      "objects": [
+        { "id": 1, "name": "north-wall", "type": "collision", "x": 0, "y": 0, "width": 1920, "height": 32 },
+        { "id": 2, "name": "south-wall", "type": "collision", "x": 0, "y": 1248, "width": 1920, "height": 32 },
+        { "id": 3, "name": "west-wall", "type": "collision", "x": 0, "y": 0, "width": 32, "height": 1280 },
+        { "id": 4, "name": "east-wall", "type": "collision", "x": 1888, "y": 0, "width": 32, "height": 1280 }
+      ]
+    }
+  ],
+  "tilesets": []
+}

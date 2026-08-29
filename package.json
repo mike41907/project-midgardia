@@ -1,0 +1,22 @@
+{
+  "name": "project-midgardia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An original, private multiplayer 2D RPG foundation inspired by classic PC MMORPG interaction patterns.",
+  "scripts": {
+    "dev": "pnpm build:packages && pnpm db:push && pnpm db:seed && concurrently -n client,server -c cyan,magenta \"pnpm --filter @midgardia/client dev\" \"pnpm --filter @midgardia/server dev\"",
+    "build:packages": "pnpm --filter @midgardia/shared build && pnpm --filter @midgardia/game-data build",
+    "build": "pnpm build:packages && pnpm --filter @midgardia/client build && pnpm --filter @midgardia/server build",
+    "test": "vitest run",
+    "db:push": "pnpm --filter @midgardia/server db:push",
+    "db:seed": "pnpm --filter @midgardia/server db:seed",
+    "check": "pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "packageManager": "pnpm@10.10.0"
+}

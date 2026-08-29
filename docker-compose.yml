@@ -1,0 +1,19 @@
+services:
+  midgardia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      CLIENT_ORIGIN: "http://localhost:3000"
+      JWT_SECRET: "change-this-for-a-private-server"
+      DATABASE_URL: "file:../data/midgardia.db"
+      PUBLIC_REGISTRATION: "true"
+    volumes:
+      - midgardia-data:/app/apps/server/data
+    restart: unless-stopped
+
+volumes:
+  midgardia-data:
