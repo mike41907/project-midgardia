@@ -17,6 +17,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private readonly shadow: Phaser.GameObjects.Ellipse;
   private readonly art: Phaser.GameObjects.Container;
   private readonly artGraphics: Phaser.GameObjects.Graphics;
+  private readonly sprite?: Phaser.GameObjects.Image;
   private readonly nameText: Phaser.GameObjects.Text;
   private state: NetworkPlayerState;
   private phase = Math.random() * Math.PI * 2;
@@ -31,11 +32,18 @@ export class AvatarView extends Phaser.GameObjects.Container {
     this.targetX = state.x;
     this.targetY = state.y;
     this.selectionRing = scene.add.graphics();
-    this.shadow = scene.add.ellipse(0, 14, 26, 9, 0x101826, 0.34);
+    this.shadow = scene.add.ellipse(0, 14, 32, 10, 0x101826, 0.38);
     this.art = scene.add.container(0, 0);
     this.artGraphics = scene.add.graphics();
     this.art.add(this.artGraphics);
-    this.nameText = scene.add.text(0, -39, state.name, {
+    if (scene.textures.exists("adventurer-idle")) {
+      this.sprite = scene.add.image(0, 24, "adventurer-idle")
+        .setOrigin(0.5, 1)
+        .setDisplaySize(62, 82);
+      this.art.add(this.sprite);
+      this.artGraphics.setVisible(false);
+    }
+    this.nameText = scene.add.text(0, this.sprite ? -70 : -39, state.name, {
       color: state.isSitting ? "#b5c3d6" : "#fff3d1",
       fontFamily: "'Trebuchet MS', sans-serif",
       fontSize: "12px",
@@ -53,7 +61,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
     this.state = next;
     this.targetX = next.x;
     this.targetY = next.y;
-    this.nameText.setText(next.name);
+    this.nameText.setText(next.name).setY(this.sprite ? -70 : -39);
     this.nameText.setColor(next.isSitting ? "#b5c3d6" : "#fff3d1");
     this.redraw();
   }
@@ -69,6 +77,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
     this.shadow.scaleX = moving ? 1 + Math.abs(wave) * 0.08 : 1;
     this.art.scaleY = this.state.isSitting ? 0.78 : 1;
     this.art.scaleX = 1;
+    if (this.sprite) this.sprite.setAlpha(this.state.isSitting ? 0.78 : 1);
     this.selectionRing.alpha = this.state.isSitting ? 0.28 : 0.55;
     if (this.pulse > 0) {
       this.pulse = Math.max(0, this.pulse - delta);
@@ -87,8 +96,10 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private redraw(): void {
     const graphics = this.artGraphics;
     graphics.clear();
+    graphics.setVisible(!this.sprite);
     const facing = directionRotation[this.state.facing];
-    this.art.rotation = facing;
+    this.art.rotation = this.sprite ? 0 : facing;
+    this.sprite?.setFlipX(["east", "northEast", "southEast"].includes(this.state.facing));
 
     this.selectionRing.clear();
     this.selectionRing.lineStyle(1, 0xffe6a5, 0.9);

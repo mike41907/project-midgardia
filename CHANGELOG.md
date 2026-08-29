@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0] - 2026-08-29
+
+### Changed
+
+- Replaced the flat Phase 1 map presentation with original pixel-art village and town backgrounds.
+- Added a readable original adventurer sprite, map landmarks, atmosphere, and clearer portal/NPC presentation.
+- Refined the game HUD hierarchy, zone-entry banner, panel contrast, and mobile safe-area layout.
+- Recorded generated asset provenance in `assets/asset-manifest.json`.
+
 ## [0.1.0] - 2026-08-29
 
 ### Added

@@ -28,6 +28,8 @@ export class WorldRenderer {
   private readonly ground: Phaser.GameObjects.Graphics;
   private readonly detail: Phaser.GameObjects.Graphics;
   private readonly atmosphere: Phaser.GameObjects.Graphics;
+  private readonly villageBackground?: Phaser.GameObjects.Image;
+  private readonly townBackground?: Phaser.GameObjects.Image;
   private decorations: Phaser.GameObjects.GameObject[] = [];
   private map?: MapDefinition;
 
@@ -38,6 +40,16 @@ export class WorldRenderer {
     this.detail = scene.add.graphics();
     this.atmosphere = scene.add.graphics();
     this.root.add([this.ground, this.detail, this.atmosphere]);
+    if (scene.textures.exists("sunpetal-village-bg")) {
+      this.villageBackground = scene.add.image(0, 0, "sunpetal-village-bg").setOrigin(0, 0);
+      scene.textures.get("sunpetal-village-bg").setFilter(Phaser.Textures.FilterMode.NEAREST);
+      this.root.addAt(this.villageBackground, 0);
+    }
+    if (scene.textures.exists("emberfall-town-bg")) {
+      this.townBackground = scene.add.image(0, 0, "emberfall-town-bg").setOrigin(0, 0);
+      scene.textures.get("emberfall-town-bg").setFilter(Phaser.Textures.FilterMode.NEAREST);
+      this.root.addAt(this.townBackground, 0);
+    }
   }
 
   render(mapId: string): MapDefinition {
@@ -47,49 +59,58 @@ export class WorldRenderer {
     const width = map.width * size;
     const height = map.height * size;
     const palette = map.id === "emberfall-town" ? townPalette : villagePalette;
+    const hasIllustratedMap = map.id === "sunpetal-village" ? Boolean(this.villageBackground) : Boolean(this.townBackground);
 
     this.ground.clear();
     this.detail.clear();
     this.atmosphere.clear();
-    this.ground.fillStyle(palette.ground[0], 1);
-    this.ground.fillRect(0, 0, width, height);
+    this.villageBackground?.setVisible(map.id === "sunpetal-village" && hasIllustratedMap).setDisplaySize(width, height);
+    this.townBackground?.setVisible(map.id === "emberfall-town" && hasIllustratedMap).setDisplaySize(width, height);
+    this.ground.setVisible(!hasIllustratedMap);
+    this.detail.setVisible(true);
+    if (!hasIllustratedMap) {
+      this.ground.fillStyle(palette.ground[0], 1);
+      this.ground.fillRect(0, 0, width, height);
 
-    for (let y = 0; y < map.height; y += 1) {
-      for (let x = 0; x < map.width; x += 1) {
-        const variation = (x * 17 + y * 31 + (map.id === "emberfall-town" ? 9 : 0)) % palette.ground.length;
-        const inRoad = map.id === "emberfall-town"
-          ? (x > 27 && x < 33) || (y > 18 && y < 22)
-          : (x > 26 && x < 34) || (y > 19 && y < 23);
-        const tileX = x * size;
-        const tileY = y * size;
-        this.ground.fillStyle(inRoad ? palette.road : palette.ground[variation], 1);
-        this.ground.fillRect(tileX, tileY, size + 1, size + 1);
+      for (let y = 0; y < map.height; y += 1) {
+        for (let x = 0; x < map.width; x += 1) {
+          const variation = (x * 17 + y * 31 + (map.id === "emberfall-town" ? 9 : 0)) % palette.ground.length;
+          const inRoad = map.id === "emberfall-town"
+            ? (x > 27 && x < 33) || (y > 18 && y < 22)
+            : (x > 26 && x < 34) || (y > 19 && y < 23);
+          const tileX = x * size;
+          const tileY = y * size;
+          this.ground.fillStyle(inRoad ? palette.road : palette.ground[variation], 1);
+          this.ground.fillRect(tileX, tileY, size + 1, size + 1);
 
-        if (inRoad) {
-          this.detail.lineStyle(1, palette.roadEdge, 0.16);
-          this.detail.strokeRect(tileX + 1, tileY + 1, size - 2, size - 2);
-          if ((x + y) % 4 === 0) {
-            this.detail.fillStyle(palette.roadEdge, 0.18);
-            this.detail.fillRect(tileX + 8, tileY + 15, 11, 2);
+          if (inRoad) {
+            this.detail.lineStyle(1, palette.roadEdge, 0.16);
+            this.detail.strokeRect(tileX + 1, tileY + 1, size - 2, size - 2);
+            if ((x + y) % 4 === 0) {
+              this.detail.fillStyle(palette.roadEdge, 0.18);
+              this.detail.fillRect(tileX + 8, tileY + 15, 11, 2);
+            }
+          } else if (variation === 0) {
+            this.detail.fillStyle(map.id === "emberfall-town" ? 0x765f4e : 0x527b5a, 0.38);
+            this.detail.fillRect(tileX + 7, tileY + 9, 2, 2);
+            this.detail.fillRect(tileX + 22, tileY + 19, 2, 2);
+          } else if ((x * 7 + y * 11) % 13 === 0) {
+            this.detail.lineStyle(1, map.id === "emberfall-town" ? 0xb29676 : 0x9bc48b, 0.22);
+            this.detail.lineBetween(tileX + 14, tileY + 22, tileX + 16, tileY + 17);
+            this.detail.lineBetween(tileX + 16, tileY + 17, tileX + 19, tileY + 20);
           }
-        } else if (variation === 0) {
-          this.detail.fillStyle(map.id === "emberfall-town" ? 0x765f4e : 0x527b5a, 0.38);
-          this.detail.fillRect(tileX + 7, tileY + 9, 2, 2);
-          this.detail.fillRect(tileX + 22, tileY + 19, 2, 2);
-        } else if ((x * 7 + y * 11) % 13 === 0) {
-          this.detail.lineStyle(1, map.id === "emberfall-town" ? 0xb29676 : 0x9bc48b, 0.22);
-          this.detail.lineBetween(tileX + 14, tileY + 22, tileX + 16, tileY + 17);
-          this.detail.lineBetween(tileX + 16, tileY + 17, tileX + 19, tileY + 20);
         }
       }
     }
 
-    this.drawBoundary(width, height, palette.boundary);
-    for (const [index, rect] of map.blocked.entries()) {
-      if (this.isBoundaryRect(rect, width, height)) continue;
-      this.drawBuilding(rect, palette, index);
+    if (!hasIllustratedMap) {
+      this.drawBoundary(width, height, palette.boundary);
+      for (const [index, rect] of map.blocked.entries()) {
+        if (this.isBoundaryRect(rect, width, height)) continue;
+        this.drawBuilding(rect, palette, index);
+      }
+      this.drawLandmarks(map, palette);
     }
-    this.drawLandmarks(map, palette);
     this.drawAtmosphere(width, height, map.id === "emberfall-town");
 
     for (const decoration of this.decorations) decoration.destroy();

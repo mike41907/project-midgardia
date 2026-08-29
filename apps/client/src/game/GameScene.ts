@@ -32,6 +32,12 @@ export class GameScene extends Phaser.Scene {
     this.hud = data.hud;
   }
 
+  preload(): void {
+    this.load.image("sunpetal-village-bg", `${import.meta.env.BASE_URL}art/sunpetal-village-bg.png`);
+    this.load.image("emberfall-town-bg", `${import.meta.env.BASE_URL}art/emberfall-town-bg.png`);
+    this.load.image("adventurer-idle", `${import.meta.env.BASE_URL}art/adventurer-idle.png`);
+  }
+
   create(): void {
     this.worldRenderer = new WorldRenderer(this);
     this.network.onState((state) => this.applyWorldState(state));

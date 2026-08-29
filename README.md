@@ -9,7 +9,7 @@ The first playable milestone is implemented as a real client/server flow:
 - account registration and login with hashed passwords and signed session tokens;
 - up to five persistent characters per account;
 - SQLite + Prisma persistence for character position, map, level, and presentation data;
-- Phaser 3 client with original procedural pixel-style avatars and two rendered maps;
+- Phaser 3 client with original pixel-art map backgrounds, an adventurer sprite, fallback procedural rendering, and two rendered maps;
 - server-authoritative click-to-move with collision checks and movement speed limits;
 - eight facing directions, smooth movement interpolation, destination feedback, and camera follow;
 - simultaneous players visible through Socket.IO world snapshots;
@@ -67,7 +67,7 @@ docs/            architecture and phase notes
 
 ## Original-content boundary
 
-All project names, NPCs, map names, data, UI graphics, and placeholder audio are original. The implementation intentionally uses code-drawn visuals during Phase 1 so no third-party game assets are smuggled into the repository. Replace them only with assets that you created or have a license to use.
+All project names, NPCs, map names, data, UI graphics, and placeholder audio are original. The current visual pass uses original generated pixel-art backgrounds and a player sprite, with provenance recorded in `assets/asset-manifest.json`; the code-drawn renderer remains as a deterministic fallback. No third-party game assets are included.
 
 ## Architecture notes
 

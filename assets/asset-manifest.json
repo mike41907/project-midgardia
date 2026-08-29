@@ -1,0 +1,45 @@
+{
+  "visualSystem": {
+    "camera": "45-degree top-down/isometric browser RPG",
+    "nativeMapSize": "1920x1280",
+    "palette": "moss and sage grass, warm cream roads, cedar timber, deep teal and terracotta roofs, amber light",
+    "edgeTreatment": "crisp 16-bit pixel clusters with restrained dark outline accents",
+    "lighting": "warm late-afternoon light from upper-left with short soft shadows",
+    "filtering": "nearest-neighbor at runtime"
+  },
+  "assets": [
+    {
+      "id": "sunpetal-village-bg",
+      "path": "apps/client/public/art/sunpetal-village-bg.png",
+      "role": "full-map environment background",
+      "size": "1536x1024",
+      "pivot": "top-left",
+      "collision": "collision remains authoritative in packages/game-data; background contains no collision data",
+      "source": "OpenAI built-in image_gen, generated 2026-08-29",
+      "license": "original project asset generated for Project Midgardia",
+      "status": "approved for single-player visual pass"
+    },
+    {
+      "id": "adventurer-idle",
+      "path": "apps/client/public/art/adventurer-idle.png",
+      "role": "player idle sprite fallback family seed",
+      "size": "1254x1254",
+      "pivot": "bottom-center at runtime",
+      "collision": "visual only",
+      "source": "OpenAI built-in image_gen, generated 2026-08-29",
+      "license": "original project asset generated for Project Midgardia",
+      "status": "approved for single-player visual pass; animation family pending"
+    },
+    {
+      "id": "emberfall-town-bg",
+      "path": "apps/client/public/art/emberfall-town-bg.png",
+      "role": "full-map town environment background",
+      "size": "1536x1024",
+      "pivot": "top-left",
+      "collision": "collision remains authoritative in packages/game-data; background contains no collision data",
+      "source": "OpenAI built-in image_gen using the approved village background as a style reference, generated 2026-08-29",
+      "license": "original project asset generated for Project Midgardia",
+      "status": "approved for single-player visual pass"
+    }
+  ]
+}
