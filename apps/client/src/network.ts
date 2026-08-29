@@ -7,7 +7,21 @@ import type {
 } from "@midgardia/shared";
 import type { CharacterSummary } from "@midgardia/shared";
 
-export class NetworkClient {
+export interface GameClient {
+  connect(): Promise<void>;
+  join(character: CharacterSummary): void;
+  setTarget(point: Point2): void;
+  toggleSit(): void;
+  interactNpc(npcId: string): void;
+  sendChat(channel: string, message: string): void;
+  onState(listener: (state: WorldState) => void): () => void;
+  onChat(listener: (message: ChatMessage) => void): () => void;
+  onDialog(listener: (dialog: NpcDialog) => void): () => void;
+  onSystem(listener: (message: string) => void): () => void;
+  disconnect(): void;
+}
+
+export class NetworkClient implements GameClient {
   private readonly socket: Socket;
   private latestState?: WorldState;
   private readonly stateListeners = new Set<(state: WorldState) => void>();

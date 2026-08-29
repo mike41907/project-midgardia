@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import path from "node:path";
 
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH ?? "/",
   resolve: {
     alias: {
       "@midgardia/shared": path.resolve(__dirname, "../../packages/shared/src"),

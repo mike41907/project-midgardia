@@ -1,5 +1,5 @@
 import type { NpcDialog, NetworkPlayerState, WorldState } from "@midgardia/shared";
-import type { NetworkClient } from "../network";
+import type { GameClient } from "../network";
 import { getMapDefinition } from "@midgardia/game-data";
 
 const channels = ["all", "local", "party", "guild", "whisper", "system"] as const;
@@ -7,8 +7,9 @@ type ChannelTab = (typeof channels)[number];
 
 export class GameHud {
   private readonly root: HTMLElement;
-  private readonly network: NetworkClient;
+  private readonly network: GameClient;
   private readonly onExit: () => void;
+  private readonly mode: "online" | "offline";
   private mapId = "";
   private localPosition = { x: 0, y: 0 };
   private currentChannel: ChannelTab = "all";
@@ -17,9 +18,10 @@ export class GameHud {
   private dialogIndex = 0;
   private readonly refs: Record<string, HTMLElement> = {};
 
-  constructor(parent: HTMLElement, network: NetworkClient, character: NetworkPlayerState, onExit: () => void) {
+  constructor(parent: HTMLElement, network: GameClient, character: NetworkPlayerState, onExit: () => void, mode: "online" | "offline" = "online") {
     this.network = network;
     this.onExit = onExit;
+    this.mode = mode;
     this.root = document.createElement("section");
     this.root.className = "game-shell";
     this.root.innerHTML = this.template(character);
@@ -131,8 +133,8 @@ export class GameHud {
   private template(character: NetworkPlayerState): string {
     const slots = Array.from({ length: 9 }, (_, index) => `<button class="skill-slot" data-skill="F${index + 1}" title="Reserved for Phase 4"><span>F${index + 1}</span><b>—</b></button>`).join("");
     return `
-      <div class="game-topbar">
-        <div class="brand-lockup"><span class="brand-mark">✦</span><div><strong>PROJECT MIDGARDIA</strong><small>PRIVATE WORLD · PHASE 1</small></div></div>
+        <div class="game-topbar">
+        <div class="brand-lockup"><span class="brand-mark">✦</span><div><strong>PROJECT MIDGARDIA</strong><small>${this.mode === "offline" ? "SINGLE-PLAYER DEMO" : "PRIVATE WORLD · PHASE 1"}</small></div></div>
         <div class="player-panel">
           <div class="portrait-chip"><span class="portrait-glyph">✧</span></div>
           <div class="player-copy"><strong id="player-name">${this.escape(character.name)}</strong><span id="player-state">Ready</span></div>

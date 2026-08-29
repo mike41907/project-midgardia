@@ -21,6 +21,10 @@ The first playable milestone is implemented as a real client/server flow:
 
 Combat, skills, items, cards, refining, quests, parties, guild persistence, trading, and GM/admin tools are intentionally queued for the next phases; the repository already contains the extensible schema areas for them.
 
+## Single-player web demo
+
+The first playable offline slice is deployed at [mike41907.github.io/project-midgardia](https://mike41907.github.io/project-midgardia/). Choose **PLAY SINGLE-PLAYER DEMO** on the landing screen. The browser stores one traveller's character, position, map, and appearance in local storage, so the demo needs no account or backend. The online multiplayer flow remains available when the full server is started locally or on a Node-compatible host.
+
 ## Start locally
 
 Requirements: Node.js 20+, pnpm 9+, and a browser with WebGL or Canvas support.

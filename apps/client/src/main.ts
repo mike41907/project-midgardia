@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import type { CharacterSummary, NetworkPlayerState } from "@midgardia/shared";
 import { createCharacter, getCharacters, login, register, type AuthResponse } from "./api";
-import { NetworkClient } from "./network";
+import { OfflineGameClient, createOfflineCharacter, readOfflineCharacter } from "./offline";
+import { NetworkClient, type GameClient } from "./network";
 import { GameScene } from "./game/GameScene";
 import { GameHud } from "./ui/GameHud";
 import "./ui/style.css";
@@ -9,7 +10,7 @@ import "./ui/style.css";
 const app = document.querySelector<HTMLElement>("#app")!;
 const SESSION_KEY = "midgardia-session";
 let activeGame: Phaser.Game | undefined;
-let activeNetwork: NetworkClient | undefined;
+let activeNetwork: GameClient | undefined;
 let activeHud: GameHud | undefined;
 
 interface Session {
@@ -48,11 +49,15 @@ function showAuth(mode: "login" | "register" = "login", message = ""): void {
         <div id="auth-error" class="form-error" role="alert">${escapeHtml(message)}</div>
         <button class="auth-submit" type="submit">${mode === "login" ? "LOGIN" : "REGISTER"}</button>
       </form>
+      <div class="offline-divider"><span>OR</span></div>
+      <button id="offline-play" class="offline-play" type="button">PLAY SINGLE-PLAYER DEMO</button>
+      <p class="offline-note">No account or server required · progress stays in this browser</p>
       <div class="switch-mode">${mode === "login" ? "New to the frontier?" : "Already have an account?"} <button id="switch-auth" class="text-button" type="button">${mode === "login" ? "Register" : "Login"}</button></div>
       <div class="legal-note">Private server foundation · server-authoritative movement · no third-party game assets · local SQLite data</div>
     </section></main>
   `;
   app.querySelector<HTMLButtonElement>("#switch-auth")!.addEventListener("click", () => showAuth(mode === "login" ? "register" : "login"));
+  app.querySelector<HTMLButtonElement>("#offline-play")!.addEventListener("click", () => showOfflineCharacterSelect());
   app.querySelector<HTMLFormElement>("#auth-form")!.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget as HTMLFormElement);
@@ -93,7 +98,7 @@ async function showCharacterSelect(session: Session, message = ""): Promise<void
   let characters: CharacterSummary[] = [];
   try {
     characters = await getCharacters(session.token);
-    grid.replaceChildren(...characters.map((character) => characterCard(character, () => void startGame(session, character))));
+    grid.replaceChildren(...characters.map((character) => characterCard(character, () => void startOnlineGame(session, character))));
     const newButton = document.createElement("button");
     newButton.className = "character-card new-character";
     newButton.type = "button";
@@ -115,7 +120,7 @@ async function showCharacterSelect(session: Session, message = ""): Promise<void
           hair: 1,
           hairColor: selectedColor,
         });
-        await startGame(session, character);
+        await startOnlineGame(session, character);
       } catch (requestError) {
         error.textContent = requestError instanceof Error ? requestError.message : "Could not create that character.";
       }
@@ -124,6 +129,55 @@ async function showCharacterSelect(session: Session, message = ""): Promise<void
     clearSession();
     showAuth("login", requestError instanceof Error ? requestError.message : "Session expired.");
   }
+}
+
+function showOfflineCharacterSelect(message = ""): void {
+  const saved = readOfflineCharacter();
+  app.innerHTML = `
+    <main class="screen"><section class="select-card">
+      <div class="select-heading"><div><div class="brand-lockup"><span class="brand-mark">✦</span><div><strong>PROJECT MIDGARDIA</strong><small>SINGLE-PLAYER DEMO</small></div></div><h1>Choose your traveller.</h1><p>Your one-character save is stored locally in this browser. No account or internet connection is needed after the page loads.</p></div><div class="account-chip">LOCAL SAVE</div></div>
+      <div id="offline-error" class="form-error" role="alert">${escapeHtml(message)}</div>
+      <div id="offline-character-grid" class="character-grid"></div>
+      <form id="offline-character-form" class="character-form" hidden>
+        <div class="panel-caption"><span>NEW OFFLINE TRAVELLER</span><b>SPAWN: SUNPETAL VILLAGE</b></div>
+        <div class="form-row"><div class="field"><label for="offline-character-name">Character name</label><input id="offline-character-name" name="name" required minlength="2" maxlength="16" placeholder="e.g. Rowan" /></div><div class="field"><label for="offline-gender">Presentation</label><select id="offline-gender" name="gender"><option value="androgynous">Androgynous</option><option value="feminine">Feminine</option><option value="masculine">Masculine</option></select></div></div>
+        <div class="field"><label>Hair color</label><div class="swatches"><button type="button" class="swatch active" data-color="#e8bd77" style="background:#e8bd77" aria-label="Gold hair"></button><button type="button" class="swatch" data-color="#b7d7e9" style="background:#b7d7e9" aria-label="Silver hair"></button><button type="button" class="swatch" data-color="#d889a7" style="background:#d889a7" aria-label="Rose hair"></button><button type="button" class="swatch" data-color="#8ac59c" style="background:#8ac59c" aria-label="Mint hair"></button></div></div>
+        <div class="form-row"><button id="cancel-offline-create" type="button" class="logout-button" style="position:static">CANCEL</button><button type="submit" class="primary-button">CREATE & ENTER VILLAGE</button></div>
+      </form>
+      <div class="offline-actions"><button id="offline-back" type="button" class="text-button">BACK TO ACCOUNT LOGIN</button><span class="offline-note">Autosaves position, map, and character look</span></div>
+    </section></main>
+  `;
+  const grid = app.querySelector<HTMLElement>("#offline-character-grid")!;
+  const form = app.querySelector<HTMLFormElement>("#offline-character-form")!;
+  const error = app.querySelector<HTMLElement>("#offline-error")!;
+  if (saved) grid.append(characterCard(saved, () => void startOfflineGame(saved)));
+  const newButton = document.createElement("button");
+  newButton.className = "character-card new-character";
+  newButton.type = "button";
+  newButton.innerHTML = `<span class="char-icon">＋</span><strong>${saved ? "New traveller" : "Begin your journey"}</strong><small>Start at Sunpetal Village</small>`;
+  newButton.addEventListener("click", () => { form.hidden = false; newButton.hidden = true; form.querySelector<HTMLInputElement>("#offline-character-name")?.focus(); });
+  grid.append(newButton);
+  app.querySelector<HTMLButtonElement>("#offline-back")!.addEventListener("click", () => showAuth("login"));
+  app.querySelector<HTMLButtonElement>("#cancel-offline-create")!.addEventListener("click", () => { form.hidden = true; newButton.hidden = false; });
+  form.querySelectorAll<HTMLButtonElement>(".swatch").forEach((swatch) => swatch.addEventListener("click", () => {
+    form.querySelectorAll(".swatch").forEach((item) => item.classList.toggle("active", item === swatch));
+  }));
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const values = new FormData(form);
+    const name = String(values.get("name") ?? "").trim();
+    if (name.length < 2) {
+      error.textContent = "Choose a name with at least 2 characters.";
+      return;
+    }
+    const selectedColor = form.querySelector<HTMLButtonElement>(".swatch.active")?.dataset.color ?? "#e8bd77";
+    const character = createOfflineCharacter({
+      name,
+      gender: String(values.get("gender") ?? "androgynous"),
+      hairColor: selectedColor,
+    });
+    void startOfflineGame(character);
+  });
 }
 
 function characterCard(character: CharacterSummary, onSelect: () => void): HTMLButtonElement {
@@ -135,15 +189,25 @@ function characterCard(character: CharacterSummary, onSelect: () => void): HTMLB
   return card;
 }
 
-async function startGame(session: Session, character: CharacterSummary): Promise<void> {
+async function startOnlineGame(session: Session, character: CharacterSummary): Promise<void> {
   const network = new NetworkClient(session.token);
   try {
     await network.connect();
   } catch (error) {
     network.disconnect();
-    showCharacterSelect(session, error instanceof Error ? error.message : "Could not connect to the world server.");
+    void showCharacterSelect(session, error instanceof Error ? error.message : "Could not connect to the world server.");
     return;
   }
+  await launchGame(network, character, "online", () => void showCharacterSelect(session));
+}
+
+async function startOfflineGame(character: CharacterSummary): Promise<void> {
+  const network = new OfflineGameClient();
+  await network.connect();
+  await launchGame(network, character, "offline", () => showOfflineCharacterSelect());
+}
+
+async function launchGame(network: GameClient, character: CharacterSummary, mode: "online" | "offline", onExit: () => void): Promise<void> {
   activeNetwork = network;
   const initialPlayer: NetworkPlayerState = {
     id: character.id,
@@ -160,7 +224,7 @@ async function startGame(session: Session, character: CharacterSummary): Promise
     x: character.x,
     y: character.y,
   };
-  const hud = new GameHud(app, network, initialPlayer, () => leaveWorld(session));
+  const hud = new GameHud(app, network, initialPlayer, () => leaveWorld(onExit), mode);
   activeHud = hud;
   activeGame = new Phaser.Game({
     type: Phaser.AUTO,
@@ -175,14 +239,14 @@ async function startGame(session: Session, character: CharacterSummary): Promise
   activeGame.scene.add("world", GameScene, true, { network, character, hud });
 }
 
-function leaveWorld(session: Session): void {
+function leaveWorld(onExit: () => void): void {
   activeGame?.destroy(true);
   activeGame = undefined;
   activeNetwork?.disconnect();
   activeNetwork = undefined;
   activeHud?.close();
   activeHud = undefined;
-  void showCharacterSelect(session);
+  onExit();
 }
 
 function escapeHtml(value: string): string {

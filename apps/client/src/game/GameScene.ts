@@ -1,18 +1,18 @@
 import { getMapDefinition } from "@midgardia/game-data";
 import type { CharacterSummary, NetworkPlayerState, WorldState } from "@midgardia/shared";
 import type { GameHud } from "../ui/GameHud";
-import { NetworkClient } from "../network";
+import type { GameClient } from "../network";
 import { AvatarView } from "./AvatarView";
 import { WorldRenderer } from "./WorldRenderer";
 
 export interface GameSceneData {
-  network: NetworkClient;
+  network: GameClient;
   character: CharacterSummary;
   hud: GameHud;
 }
 
 export class GameScene extends Phaser.Scene {
-  private network!: NetworkClient;
+  private network!: GameClient;
   private character!: CharacterSummary;
   private hud!: GameHud;
   private worldRenderer!: WorldRenderer;
