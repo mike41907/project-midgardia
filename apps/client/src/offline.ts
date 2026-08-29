@@ -1,4 +1,4 @@
-import { canTraverse, findPortalAt, getMapDefinition } from "@midgardia/game-data";
+import { canTraverse, findPortalAt, findWalkablePath, getMapDefinition, isWalkable } from "@midgardia/game-data";
 import {
   directionFromVector,
   type ChatMessage,
@@ -82,6 +82,7 @@ export function createOfflineCharacter(values: { name: string; gender: string; h
 interface OfflineRuntime extends CharacterSummary {
   targetX: number;
   targetY: number;
+  waypoints: Point2[];
 }
 
 export class OfflineGameClient implements GameClient {
@@ -111,6 +112,7 @@ export class OfflineGameClient implements GameClient {
       y: position.y,
       targetX: position.x,
       targetY: position.y,
+      waypoints: [],
     };
     this.emitSystem(`Offline mode ready. Welcome to ${map.name}, ${this.runtime.name}.`);
     this.emitState();
@@ -125,19 +127,21 @@ export class OfflineGameClient implements GameClient {
       x: Math.max(WORLD.playerRadius, Math.min(map.width * map.tileSize - WORLD.playerRadius, point.x)),
       y: Math.max(WORLD.playerRadius, Math.min(map.height * map.tileSize - WORLD.playerRadius, point.y)),
     };
-    if (!canTraverse(runtime.mapId, { x: runtime.x, y: runtime.y }, target, WORLD.playerRadius)) {
+    const path = findWalkablePath(runtime.mapId, { x: runtime.x, y: runtime.y }, target, WORLD.playerRadius);
+    if (path.length === 0) {
       runtime.targetX = runtime.x;
       runtime.targetY = runtime.y;
       this.emitSystem("The way is blocked.");
       this.emitState();
       return;
     }
-    runtime.targetX = target.x;
-    runtime.targetY = target.y;
+    runtime.waypoints = path;
+    this.advanceWaypoint();
     runtime.isSitting = false;
     if (Math.hypot(target.x - runtime.x, target.y - runtime.y) > 0.5) {
       runtime.facing = directionFromVector(target.x - runtime.x, target.y - runtime.y);
     }
+    if (!isWalkable(runtime.mapId, target.x, target.y, WORLD.playerRadius)) this.emitSystem("That spot is occupied; moving to the nearest open ground.");
     this.emitState();
   }
 
@@ -146,6 +150,7 @@ export class OfflineGameClient implements GameClient {
     if (!runtime) return;
     runtime.targetX = runtime.x;
     runtime.targetY = runtime.y;
+    runtime.waypoints = [];
     runtime.isSitting = !runtime.isSitting;
     this.emitSystem(runtime.isSitting ? "You sit down to rest." : "You stand up.");
     this.saveRuntime(true);
@@ -215,10 +220,18 @@ export class OfflineGameClient implements GameClient {
   private tick(): void {
     const runtime = this.runtime;
     if (!runtime) return;
-    const dx = runtime.targetX - runtime.x;
-    const dy = runtime.targetY - runtime.y;
-    const distance = Math.hypot(dx, dy);
+    let dx = runtime.targetX - runtime.x;
+    let dy = runtime.targetY - runtime.y;
+    let distance = Math.hypot(dx, dy);
     let moved = false;
+    let waypointAdvanced = false;
+    if (distance <= 0.5 && runtime.waypoints.length > 0) {
+      this.advanceWaypoint();
+      dx = runtime.targetX - runtime.x;
+      dy = runtime.targetY - runtime.y;
+      distance = Math.hypot(dx, dy);
+      waypointAdvanced = true;
+    }
     if (distance > 0.5) {
       const amount = Math.min(WORLD.movementSpeed / WORLD.tickRate, distance);
       const next = { x: runtime.x + (dx / distance) * amount, y: runtime.y + (dy / distance) * amount };
@@ -230,6 +243,7 @@ export class OfflineGameClient implements GameClient {
       } else {
         runtime.targetX = runtime.x;
         runtime.targetY = runtime.y;
+        runtime.waypoints = [];
         this.emitSystem("The way is blocked.");
       }
     }
@@ -241,13 +255,14 @@ export class OfflineGameClient implements GameClient {
       runtime.y = portal.toY;
       runtime.targetX = portal.toX;
       runtime.targetY = portal.toY;
+      runtime.waypoints = [];
       runtime.isSitting = false;
       this.emitSystem(`You arrive at ${getMapDefinition(runtime.mapId).name}.`);
       moved = true;
     }
 
     if (moved || Date.now() - this.lastSavedAt > 1000) this.saveRuntime();
-    if (moved || distance > 0.5) this.emitState();
+    if (moved || waypointAdvanced || distance > 0.5) this.emitState();
   }
 
   private emitState(): void {
@@ -301,9 +316,22 @@ export class OfflineGameClient implements GameClient {
   private saveRuntime(force = false): void {
     const runtime = this.runtime;
     if (!runtime || (!force && Date.now() - this.lastSavedAt < 900)) return;
-    const { targetX: _targetX, targetY: _targetY, ...character } = runtime;
+    const { targetX: _targetX, targetY: _targetY, waypoints: _waypoints, ...character } = runtime;
     saveOfflineCharacter(character);
     this.lastSavedAt = Date.now();
+  }
+
+  private advanceWaypoint(): void {
+    const runtime = this.runtime;
+    if (!runtime) return;
+    const waypoint = runtime.waypoints.shift();
+    if (waypoint) {
+      runtime.targetX = waypoint.x;
+      runtime.targetY = waypoint.y;
+    } else {
+      runtime.targetX = runtime.x;
+      runtime.targetY = runtime.y;
+    }
   }
 
   private stopTimer(): void {

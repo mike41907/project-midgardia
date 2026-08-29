@@ -182,6 +182,92 @@ export function canTraverse(mapId: string, from: MapPoint, to: MapPoint, radius 
   return true;
 }
 
+/** Find grid waypoints around blockers for the offline click-to-move client. */
+export function findWalkablePath(mapId: string, from: MapPoint, to: MapPoint, radius = 12): MapPoint[] {
+  if (canTraverse(mapId, from, to, radius)) return [to];
+
+  const map = getMapDefinition(mapId);
+  const cellSize = map.tileSize;
+  const nodes = new Map<string, MapPoint>();
+  const keyFor = (column: number, row: number) => `${column},${row}`;
+  const distanceTo = (a: MapPoint, b: MapPoint) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  for (let row = 0; row < map.height; row += 1) {
+    for (let column = 0; column < map.width; column += 1) {
+      const point = { x: column * cellSize + cellSize / 2, y: row * cellSize + cellSize / 2 };
+      if (isWalkable(mapId, point.x, point.y, radius)) nodes.set(keyFor(column, row), point);
+    }
+  }
+
+  const candidates = [...nodes.entries()].sort(([, a], [, b]) => distanceTo(a, from) - distanceTo(b, from));
+  const startEntry = candidates.find(([, point]) => canTraverse(mapId, from, point, radius));
+  if (!startEntry) return [];
+
+  const targetIsWalkable = isWalkable(mapId, to.x, to.y, radius);
+  const startKey = startEntry[0];
+  const open = new Set<string>([startKey]);
+  const cameFrom = new Map<string, string>();
+  const gScore = new Map<string, number>([[startKey, 0]]);
+  const fScore = new Map<string, number>([[startKey, distanceTo(nodes.get(startKey)!, to)]]);
+  const offsets = [-1, 0, 1];
+  let bestKey = startKey;
+  let bestDistance = distanceTo(nodes.get(startKey)!, to);
+  let terminalKey: string | undefined;
+
+  while (open.size > 0) {
+    let currentKey = "";
+    let currentScore = Number.POSITIVE_INFINITY;
+    for (const key of open) {
+      const score = fScore.get(key) ?? Number.POSITIVE_INFINITY;
+      if (score < currentScore) {
+        currentKey = key;
+        currentScore = score;
+      }
+    }
+    if (!currentKey) break;
+    open.delete(currentKey);
+    const current = nodes.get(currentKey)!;
+    const currentDistance = distanceTo(current, to);
+    if (currentDistance < bestDistance) {
+      bestKey = currentKey;
+      bestDistance = currentDistance;
+    }
+    if (targetIsWalkable && canTraverse(mapId, current, to, radius)) {
+      terminalKey = currentKey;
+      break;
+    }
+
+    const [column, row] = currentKey.split(",").map(Number);
+    for (const rowOffset of offsets) {
+      for (const columnOffset of offsets) {
+        if (rowOffset === 0 && columnOffset === 0) continue;
+        const neighborKey = keyFor(column + columnOffset, row + rowOffset);
+        const neighbor = nodes.get(neighborKey);
+        if (!neighbor || !canTraverse(mapId, current, neighbor, radius)) continue;
+        const stepCost = Math.hypot(columnOffset, rowOffset);
+        const tentativeScore = (gScore.get(currentKey) ?? Number.POSITIVE_INFINITY) + stepCost;
+        if (tentativeScore >= (gScore.get(neighborKey) ?? Number.POSITIVE_INFINITY)) continue;
+        cameFrom.set(neighborKey, currentKey);
+        gScore.set(neighborKey, tentativeScore);
+        fScore.set(neighborKey, tentativeScore + distanceTo(neighbor, to) / cellSize);
+        open.add(neighborKey);
+      }
+    }
+  }
+
+  const endKey = terminalKey ?? bestKey;
+  const pathKeys = [endKey];
+  while (pathKeys[0] !== startKey) {
+    const previous = cameFrom.get(pathKeys[0]);
+    if (!previous) break;
+    pathKeys.unshift(previous);
+  }
+  const path = pathKeys.map((key) => nodes.get(key)!).filter(Boolean);
+  const last = path[path.length - 1];
+  if (targetIsWalkable && last && canTraverse(mapId, last, to, radius)) path.push(to);
+  return path;
+}
+
 export function findPortalAt(mapId: string, point: MapPoint): PortalDefinition | undefined {
   return getMapDefinition(mapId).portals.find((portal) => Math.hypot(portal.x - point.x, portal.y - point.y) <= portal.radius);
 }
