@@ -155,7 +155,14 @@ function showOfflineCharacterSelect(message = ""): void {
   newButton.className = "character-card new-character";
   newButton.type = "button";
   newButton.innerHTML = `<span class="char-icon">＋</span><strong>${saved ? "New traveller" : "Begin your journey"}</strong><small>Start at Sunpetal Village</small>`;
-  newButton.addEventListener("click", () => { form.hidden = false; newButton.hidden = true; form.querySelector<HTMLInputElement>("#offline-character-name")?.focus(); });
+  newButton.addEventListener("click", () => {
+    form.hidden = false;
+    newButton.hidden = true;
+    requestAnimationFrame(() => {
+      form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      form.querySelector<HTMLInputElement>("#offline-character-name")?.focus({ preventScroll: true });
+    });
+  });
   grid.append(newButton);
   app.querySelector<HTMLButtonElement>("#offline-back")!.addEventListener("click", () => showAuth("login"));
   app.querySelector<HTMLButtonElement>("#cancel-offline-create")!.addEventListener("click", () => { form.hidden = true; newButton.hidden = false; });
