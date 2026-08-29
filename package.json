@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "pnpm build:packages && pnpm db:push && pnpm db:seed && concurrently -n client,server -c cyan,magenta \"pnpm --filter @midgardia/client dev\" \"pnpm --filter @midgardia/server dev\"",
     "build:packages": "pnpm --filter @midgardia/shared build && pnpm --filter @midgardia/game-data build",
-    "build": "pnpm build:packages && pnpm --filter @midgardia/client build && pnpm --filter @midgardia/server build",
+    "db:generate": "pnpm --filter @midgardia/server prisma:generate",
+    "build": "pnpm build:packages && pnpm db:generate && pnpm --filter @midgardia/client build && pnpm --filter @midgardia/server build",
     "test": "vitest run",
     "db:push": "pnpm --filter @midgardia/server db:push",
     "db:seed": "pnpm --filter @midgardia/server db:seed",
